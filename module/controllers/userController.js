@@ -12,10 +12,18 @@ const sendResponse = (res, statusCode, success, message, result = {}) => {
 
 const register = async (req, res) => {
   try {
-    const { fullName, email, password, phone } = req.body;
+    const { fullName, email, password, confirmPassword, phone, acceptTerms } = req.body;
 
-    if (!email || !password) {
-      return sendResponse(res, 400, false, "Email and password are required");
+    if (!fullName?.trim() || !email?.trim() || !password || !phone?.trim()) {
+      return sendResponse(res, 400, false, "Full name, email, phone and password are required");
+    }
+
+    if (password !== confirmPassword) {
+      return sendResponse(res, 400, false, "Passwords do not match");
+    }
+
+    if (!acceptTerms) {
+      return sendResponse(res, 400, false, "Please accept Terms & Conditions");
     }
 
     if (password.length < 6) {
@@ -33,9 +41,9 @@ const register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = await User.create({
-      fullName: fullName || "",
+      fullName: fullName.trim(),
       email: email.toLowerCase().trim(),
-      phone: phone || "",
+      phone: phone.trim(),
       password: hashedPassword,
     });
 
