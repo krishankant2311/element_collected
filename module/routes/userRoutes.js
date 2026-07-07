@@ -3,6 +3,7 @@ const {
   register,
   login,
   getProfile,
+  updateProfile,
   refreshAccessToken,
   logout,
 } = require("../controllers/userController");
@@ -14,6 +15,7 @@ router.post("/register", register);
 router.post("/login", login);
 router.post("/refresh-token", refreshAccessToken);
 router.get("/profile", verifyAccessToken, getProfile);
+router.post("/update-profile", verifyAccessToken, updateProfile);
 router.post("/logout", verifyAccessToken, logout);
 
 module.exports = router;

@@ -127,6 +127,65 @@ const getProfile = async (req, res) => {
   }
 };
 
+const updateProfile = async (req, res) => {
+  try {
+    if (req.token.role !== "user") {
+      return sendResponse(res, 403, false, "Access denied");
+    }
+
+    const { fullName, phone, email, currentPassword, newPassword, confirmPassword } = req.body;
+
+    const user = await User.findById(req.token.id).select("+password");
+
+    if (!user || user.status !== "Active") {
+      return sendResponse(res, 404, false, "User not found");
+    }
+
+    if (fullName?.trim()) user.fullName = fullName.trim();
+    if (phone?.trim()) user.phone = phone.trim();
+
+    if (email?.trim() && email.toLowerCase() !== user.email) {
+      const exists = await User.findOne({ email: email.toLowerCase().trim() });
+      if (exists) {
+        return sendResponse(res, 409, false, "Email already in use");
+      }
+      user.email = email.toLowerCase().trim();
+    }
+
+    if (newPassword) {
+      if (!currentPassword) {
+        return sendResponse(res, 400, false, "Current password is required");
+      }
+      if (newPassword !== confirmPassword) {
+        return sendResponse(res, 400, false, "Passwords do not match");
+      }
+      if (newPassword.length < 6) {
+        return sendResponse(res, 400, false, "Password must be at least 6 characters");
+      }
+
+      const isMatch = await bcrypt.compare(currentPassword, user.password);
+      if (!isMatch) {
+        return sendResponse(res, 401, false, "Current password is incorrect");
+      }
+
+      user.password = await bcrypt.hash(newPassword, 10);
+    }
+
+    await user.save();
+
+    return sendResponse(res, 200, true, "Profile updated successfully", {
+      user: {
+        id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+        phone: user.phone,
+      },
+    });
+  } catch (error) {
+    return sendResponse(res, 500, false, error.message);
+  }
+};
+
 const refreshAccessToken = async (req, res) => {
   try {
     const { refreshToken } = req.body;
@@ -179,5 +238,5 @@ const logout = async (req, res) => {
   }
 };
 
-module.exports = { register, login, getProfile, refreshAccessToken, logout };
+module.exports = { register, login, getProfile, updateProfile, refreshAccessToken, logout };
 
