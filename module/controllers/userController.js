@@ -1,4 +1,5 @@
 const bcrypt = require("bcryptjs");
+const crypto = require("crypto");
 const { User } = require("../models/userModel");
 const {
   generateAccessToken,
@@ -133,9 +134,9 @@ const updateProfile = async (req, res) => {
       return sendResponse(res, 403, false, "Access denied");
     }
 
-    const { fullName, phone, email, currentPassword, newPassword, confirmPassword } = req.body;
+    const { fullName, phone, email } = req.body;
 
-    const user = await User.findById(req.token.id).select("+password");
+    const user = await User.findById(req.token.id);
 
     if (!user || user.status !== "Active") {
       return sendResponse(res, 404, false, "User not found");
@@ -152,25 +153,6 @@ const updateProfile = async (req, res) => {
       user.email = email.toLowerCase().trim();
     }
 
-    if (newPassword) {
-      if (!currentPassword) {
-        return sendResponse(res, 400, false, "Current password is required");
-      }
-      if (newPassword !== confirmPassword) {
-        return sendResponse(res, 400, false, "Passwords do not match");
-      }
-      if (newPassword.length < 6) {
-        return sendResponse(res, 400, false, "Password must be at least 6 characters");
-      }
-
-      const isMatch = await bcrypt.compare(currentPassword, user.password);
-      if (!isMatch) {
-        return sendResponse(res, 401, false, "Current password is incorrect");
-      }
-
-      user.password = await bcrypt.hash(newPassword, 10);
-    }
-
     await user.save();
 
     return sendResponse(res, 200, true, "Profile updated successfully", {
@@ -181,6 +163,46 @@ const updateProfile = async (req, res) => {
         phone: user.phone,
       },
     });
+  } catch (error) {
+    return sendResponse(res, 500, false, error.message);
+  }
+};
+
+const changePassword = async (req, res) => {
+  try {
+    if (req.token.role !== "user") {
+      return sendResponse(res, 403, false, "Access denied");
+    }
+
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      return sendResponse(res, 400, false, "Current password, new password and confirm password are required");
+    }
+
+    if (newPassword !== confirmPassword) {
+      return sendResponse(res, 400, false, "Passwords do not match");
+    }
+
+    if (newPassword.length < 6) {
+      return sendResponse(res, 400, false, "Password must be at least 6 characters");
+    }
+
+    const user = await User.findById(req.token.id).select("+password");
+
+    if (!user || user.status !== "Active") {
+      return sendResponse(res, 404, false, "User not found");
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return sendResponse(res, 401, false, "Current password is incorrect");
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    return sendResponse(res, 200, true, "Password changed successfully");
   } catch (error) {
     return sendResponse(res, 500, false, error.message);
   }
@@ -221,6 +243,87 @@ const refreshAccessToken = async (req, res) => {
   }
 };
 
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email?.trim()) {
+      return sendResponse(res, 400, false, "Email is required");
+    }
+
+    const user = await User.findOne({
+      email: email.toLowerCase().trim(),
+      status: "Active",
+    });
+
+    if (!user) {
+      return sendResponse(res, 404, false, "No account found with this email");
+    }
+
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const resetExpiry = new Date(Date.now() + 60 * 60 * 1000);
+
+    user.securityToken = resetToken;
+    user.otp = {
+      otpValue: resetToken,
+      otpExpiry: resetExpiry,
+    };
+    await user.save();
+
+    const baseUrl =
+      process.env.RESET_PASSWORD_LINK_BASE ||
+      "https://element-collected.onrender.com/reset-password";
+    const resetLink = `${baseUrl}?token=${resetToken}`;
+
+    return sendResponse(res, 200, true, "Password reset link generated", {
+      email: user.email,
+      resetLink,
+      expiresAt: resetExpiry,
+      note: "Email sending is disabled for now. Use resetLink from this response.",
+    });
+  } catch (error) {
+    return sendResponse(res, 500, false, error.message);
+  }
+};
+
+const resetPassword = async (req, res) => {
+  try {
+    const { token, newPassword, confirmPassword } = req.body;
+
+    if (!token || !newPassword || !confirmPassword) {
+      return sendResponse(res, 400, false, "Token, new password and confirm password are required");
+    }
+
+    if (newPassword !== confirmPassword) {
+      return sendResponse(res, 400, false, "Passwords do not match");
+    }
+
+    if (newPassword.length < 6) {
+      return sendResponse(res, 400, false, "Password must be at least 6 characters");
+    }
+
+    const user = await User.findOne({
+      securityToken: token,
+      status: "Active",
+    }).select("+password");
+
+    if (!user || !user.otp?.otpExpiry || user.otp.otpExpiry < new Date()) {
+      return sendResponse(res, 400, false, "Invalid or expired reset link");
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    user.securityToken = "";
+    user.otp = { otpValue: "", otpExpiry: null };
+    user.accesstoken = "";
+    user.refreshtoken = "";
+    await user.save();
+
+    return sendResponse(res, 200, true, "Password reset successful");
+  } catch (error) {
+    return sendResponse(res, 500, false, error.message);
+  }
+};
+
 const logout = async (req, res) => {
   try {
     if (req.token.role !== "user") {
@@ -238,5 +341,15 @@ const logout = async (req, res) => {
   }
 };
 
-module.exports = { register, login, getProfile, updateProfile, refreshAccessToken, logout };
+module.exports = {
+  register,
+  login,
+  getProfile,
+  updateProfile,
+  changePassword,
+  forgotPassword,
+  resetPassword,
+  refreshAccessToken,
+  logout,
+};
 
