@@ -1,33 +1,17 @@
-const mongoose = require("mongoose");
 const { Terms } = require("../models/termsModel");
 
 const sendResponse = (res, statusCode, success, message, result = {}) => {
   return res.status(statusCode).json({ statusCode, success, message, result });
 };
 
+const getActiveTerms = async () => {
+  return Terms.findOne({ status: "Active" }).sort({ updatedAt: -1 });
+};
+
 // User
 const getUserTerms = async (req, res) => {
   try {
-    const termsList = await Terms.find({ status: "Active" }).sort({ createdAt: -1 });
-
-    return sendResponse(res, 200, true, "Terms & Conditions fetched", {
-      count: termsList.length,
-      terms: termsList,
-    });
-  } catch (error) {
-    return sendResponse(res, 500, false, error.message);
-  }
-};
-
-const getUserTermsById = async (req, res) => {
-  try {
-    const { termsId } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(termsId)) {
-      return sendResponse(res, 400, false, "Invalid terms id");
-    }
-
-    const terms = await Terms.findOne({ _id: termsId, status: "Active" });
+    const terms = await getActiveTerms();
 
     if (!terms) {
       return sendResponse(res, 404, false, "Terms & Conditions not found");
@@ -42,31 +26,9 @@ const getUserTermsById = async (req, res) => {
 // Admin
 const getAdminTerms = async (req, res) => {
   try {
-    const { status } = req.query;
-    const filter = status ? { status } : { status: { $ne: "Deleted" } };
+    const terms = await getActiveTerms();
 
-    const termsList = await Terms.find(filter).sort({ createdAt: -1 });
-
-    return sendResponse(res, 200, true, "Terms & Conditions fetched", {
-      count: termsList.length,
-      terms: termsList,
-    });
-  } catch (error) {
-    return sendResponse(res, 500, false, error.message);
-  }
-};
-
-const getAdminTermsById = async (req, res) => {
-  try {
-    const { termsId } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(termsId)) {
-      return sendResponse(res, 400, false, "Invalid terms id");
-    }
-
-    const terms = await Terms.findById(termsId);
-
-    if (!terms || terms.status === "Deleted") {
+    if (!terms) {
       return sendResponse(res, 404, false, "Terms & Conditions not found");
     }
 
@@ -76,7 +38,7 @@ const getAdminTermsById = async (req, res) => {
   }
 };
 
-const createTerms = async (req, res) => {
+const saveTerms = async (req, res) => {
   try {
     const { title, content } = req.body;
 
@@ -84,37 +46,30 @@ const createTerms = async (req, res) => {
       return sendResponse(res, 400, false, "Content is required");
     }
 
-    const terms = await Terms.create({
-      title: title?.trim() || "Terms & Conditions",
-      content: content.trim(),
-    });
+    let terms = await getActiveTerms();
+    let isNew = false;
 
-    return sendResponse(res, 201, true, "Terms & Conditions created", { terms });
-  } catch (error) {
-    return sendResponse(res, 500, false, error.message);
-  }
-};
-
-const updateTerms = async (req, res) => {
-  try {
-    const { termsId } = req.params;
-    const { title, content, status } = req.body;
-
-    if (!mongoose.Types.ObjectId.isValid(termsId)) {
-      return sendResponse(res, 400, false, "Invalid terms id");
+    if (terms) {
+      terms.title = title?.trim() || "Terms & Conditions";
+      terms.content = content.trim();
+      terms.status = "Active";
+      await terms.save();
+    } else {
+      isNew = true;
+      terms = await Terms.create({
+        title: title?.trim() || "Terms & Conditions",
+        content: content.trim(),
+      });
     }
 
-    const terms = await Terms.findById(termsId);
+    await Terms.updateMany(
+      { _id: { $ne: terms._id }, status: "Active" },
+      { status: "Deleted" }
+    );
 
-    if (!terms || terms.status === "Deleted") {
-      return sendResponse(res, 404, false, "Terms & Conditions not found");
+    if (isNew) {
+      return sendResponse(res, 201, true, "Terms & Conditions created", { terms });
     }
-
-    if (title?.trim()) terms.title = title.trim();
-    if (content?.trim()) terms.content = content.trim();
-    if (status) terms.status = status;
-
-    await terms.save();
 
     return sendResponse(res, 200, true, "Terms & Conditions updated", { terms });
   } catch (error) {
@@ -122,35 +77,8 @@ const updateTerms = async (req, res) => {
   }
 };
 
-const deleteTerms = async (req, res) => {
-  try {
-    const { termsId } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(termsId)) {
-      return sendResponse(res, 400, false, "Invalid terms id");
-    }
-
-    const terms = await Terms.findById(termsId);
-
-    if (!terms || terms.status === "Deleted") {
-      return sendResponse(res, 404, false, "Terms & Conditions not found");
-    }
-
-    terms.status = "Deleted";
-    await terms.save();
-
-    return sendResponse(res, 200, true, "Terms & Conditions deleted");
-  } catch (error) {
-    return sendResponse(res, 500, false, error.message);
-  }
-};
-
 module.exports = {
   getUserTerms,
-  getUserTermsById,
   getAdminTerms,
-  getAdminTermsById,
-  createTerms,
-  updateTerms,
-  deleteTerms,
+  saveTerms,
 };

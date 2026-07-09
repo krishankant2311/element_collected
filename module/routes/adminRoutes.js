@@ -20,10 +20,7 @@ const {
 } = require("../controllers/faqController");
 const {
   getAdminTerms,
-  getAdminTermsById,
-  createTerms,
-  updateTerms,
-  deleteTerms,
+  saveTerms,
 } = require("../controllers/termsController");
 const {
   verifyAccessToken,
@@ -50,9 +47,6 @@ router.post("/faq/:faqId", ...adminAuth, updateFaq);
 router.delete("/faq/:faqId", ...adminAuth, deleteFaq);
 
 router.get("/terms", ...adminAuth, getAdminTerms);
-router.get("/terms/:termsId", ...adminAuth, getAdminTermsById);
-router.post("/terms", ...adminAuth, createTerms);
-router.post("/terms/:termsId", ...adminAuth, updateTerms);
-router.delete("/terms/:termsId", ...adminAuth, deleteTerms);
+router.post("/terms", ...adminAuth, saveTerms);
 
 module.exports = router;

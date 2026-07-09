@@ -11,7 +11,7 @@ const {
   logout,
 } = require("../controllers/userController");
 const { getUserFaqs, getUserFaqById } = require("../controllers/faqController");
-const { getUserTerms, getUserTermsById } = require("../controllers/termsController");
+const { getUserTerms } = require("../controllers/termsController");
 const { verifyAccessToken } = require("../../middleware/jwt");
 
 const router = express.Router();
@@ -29,6 +29,5 @@ router.post("/logout", verifyAccessToken, logout);
 router.get("/faq", getUserFaqs);
 router.get("/faq/:faqId", getUserFaqById);
 router.get("/terms", getUserTerms);
-router.get("/terms/:termsId", getUserTermsById);
 
 module.exports = router;

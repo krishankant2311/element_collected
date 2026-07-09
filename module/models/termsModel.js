@@ -25,46 +25,30 @@ const Terms = mongoose.model("Terms", termsSchema);
 
 const seedDummyTerms = async () => {
   try {
-    const count = await Terms.countDocuments();
-    if (count > 0) {
+    const activeTerms = await Terms.find({ status: "Active" }).sort({ updatedAt: -1 });
+
+    if (activeTerms.length > 1) {
+      const [latest, ...older] = activeTerms;
+      await Terms.updateMany(
+        { _id: { $in: older.map((item) => item._id) } },
+        { status: "Deleted" }
+      );
+      console.log("Extra Terms records cleaned up");
+      return;
+    }
+
+    if (activeTerms.length === 1) {
       console.log("Terms already exist");
       return;
     }
 
-    await Terms.insertMany([
-      {
-        title: "Terms & Conditions",
-        content:
-          "By using Jessie's Foundation, you agree to follow platform rules, provide accurate account information, and use services responsibly.",
-      },
-      {
-        title: "Privacy Policy",
-        content:
-          "We collect only necessary user data to improve services. Your personal information is never sold to third parties.",
-      },
-      {
-        title: "Donation Policy",
-        content:
-          "All donations are used for approved foundation programs. Donors receive confirmation and periodic impact updates.",
-      },
-      {
-        title: "Membership Policy",
-        content:
-          "Membership plans include defined benefits by tier. Users can upgrade, renew, or cancel as per billing terms.",
-      },
-      {
-        title: "Community Guidelines",
-        content:
-          "Users must post respectfully in forums and comments. Hate speech, spam, and abusive behavior are not allowed.",
-      },
-      {
-        title: "Refund Policy",
-        content:
-          "Membership refunds are handled case-by-case within 7 days of billing. Donation refunds follow legal and campaign rules.",
-      },
-    ]);
+    await Terms.create({
+      title: "Terms & Conditions",
+      content:
+        "By using Jessie's Foundation, you agree to provide accurate information, use the platform responsibly, and follow all community and donation guidelines.",
+    });
 
-    console.log("Dummy Terms content created successfully");
+    console.log("Dummy Terms & Conditions created successfully");
   } catch (error) {
     console.error("Error seeding Terms:", error.message);
   }
