@@ -10,6 +10,8 @@ const {
   refreshAccessToken,
   logout,
 } = require("../controllers/userController");
+const { getUserFaqs, getUserFaqById } = require("../controllers/faqController");
+const { getUserTerms, getUserTermsById } = require("../controllers/termsController");
 const { verifyAccessToken } = require("../../middleware/jwt");
 
 const router = express.Router();
@@ -23,5 +25,10 @@ router.get("/profile", verifyAccessToken, getProfile);
 router.post("/update-profile", verifyAccessToken, updateProfile);
 router.post("/change-password", verifyAccessToken, changePassword);
 router.post("/logout", verifyAccessToken, logout);
+
+router.get("/faq", getUserFaqs);
+router.get("/faq/:faqId", getUserFaqById);
+router.get("/terms", getUserTerms);
+router.get("/terms/:termsId", getUserTermsById);
 
 module.exports = router;
