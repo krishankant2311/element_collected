@@ -23,6 +23,10 @@ const {
   saveTerms,
 } = require("../controllers/termsController");
 const {
+  getAdminPrivacy,
+  savePrivacy,
+} = require("../controllers/privacyController");
+const {
   verifyAccessToken,
   requireAdmin,
 } = require("../../middleware/jwt");
@@ -48,5 +52,8 @@ router.delete("/faq/:faqId", ...adminAuth, deleteFaq);
 
 router.get("/terms", ...adminAuth, getAdminTerms);
 router.post("/terms", ...adminAuth, saveTerms);
+
+router.get("/privacy", ...adminAuth, getAdminPrivacy);
+router.post("/privacy", ...adminAuth, savePrivacy);
 
 module.exports = router;

@@ -12,6 +12,7 @@ const {
 } = require("../controllers/userController");
 const { getUserFaqs, getUserFaqById } = require("../controllers/faqController");
 const { getUserTerms } = require("../controllers/termsController");
+const { getUserPrivacy } = require("../controllers/privacyController");
 const { verifyAccessToken } = require("../../middleware/jwt");
 
 const router = express.Router();
@@ -29,5 +30,6 @@ router.post("/logout", verifyAccessToken, logout);
 router.get("/faq", getUserFaqs);
 router.get("/faq/:faqId", getUserFaqById);
 router.get("/terms", getUserTerms);
+router.get("/privacy", getUserPrivacy);
 
 module.exports = router;

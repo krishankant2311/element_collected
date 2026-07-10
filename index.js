@@ -4,6 +4,7 @@ const connectDB = require("./config/db");
 const { createDefaultAdmin } = require("./module/models/adminModel");
 const { seedDummyFaqs } = require("./module/models/faqModel");
 const { seedDummyTerms } = require("./module/models/termsModel");
+const { seedDummyPrivacy } = require("./module/models/privacyModel");
 const adminRoutes = require("./module/routes/adminRoutes");
 const userRoutes = require("./module/routes/userRoutes");
 
@@ -24,6 +25,7 @@ connectDB().then(async () => {
   await createDefaultAdmin();
   await seedDummyFaqs();
   await seedDummyTerms();
+  await seedDummyPrivacy();
   app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
