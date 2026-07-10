@@ -44,6 +44,10 @@ const userSchema = new mongoose.Schema(
       required: true,
       select: false,
     },
+    darkMode: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );

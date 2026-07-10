@@ -9,6 +9,8 @@ const {
   resetPassword,
   refreshAccessToken,
   logout,
+  getDarkMode,
+  updateDarkMode,
 } = require("../controllers/userController");
 const { getUserFaqs, getUserFaqById } = require("../controllers/faqController");
 const { getUserTerms } = require("../controllers/termsController");
@@ -26,6 +28,9 @@ router.get("/profile", verifyAccessToken, getProfile);
 router.post("/update-profile", verifyAccessToken, updateProfile);
 router.post("/change-password", verifyAccessToken, changePassword);
 router.post("/logout", verifyAccessToken, logout);
+
+router.get("/dark-mode", verifyAccessToken, getDarkMode);
+router.post("/dark-mode", verifyAccessToken, updateDarkMode);
 
 router.get("/faq", getUserFaqs);
 router.get("/faq/:faqId", getUserFaqById);

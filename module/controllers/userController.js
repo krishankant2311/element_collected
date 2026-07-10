@@ -54,6 +54,7 @@ const register = async (req, res) => {
         fullName: user.fullName,
         email: user.email,
         phone: user.phone,
+        darkMode: user.darkMode,
       },
     });
   } catch (error) {
@@ -101,6 +102,7 @@ const login = async (req, res) => {
         fullName: user.fullName,
         email: user.email,
         phone: user.phone,
+        darkMode: user.darkMode,
       },
       accessToken,
       refreshToken,
@@ -161,6 +163,7 @@ const updateProfile = async (req, res) => {
         fullName: user.fullName,
         email: user.email,
         phone: user.phone,
+        darkMode: user.darkMode,
       },
     });
   } catch (error) {
@@ -341,6 +344,57 @@ const logout = async (req, res) => {
   }
 };
 
+const getDarkMode = async (req, res) => {
+  try {
+    if (req.token.role !== "user") {
+      return sendResponse(res, 403, false, "Access denied");
+    }
+
+    const user = await User.findById(req.token.id).select("darkMode status");
+
+    if (!user || user.status !== "Active") {
+      return sendResponse(res, 404, false, "User not found");
+    }
+
+    return sendResponse(res, 200, true, "Dark mode setting fetched", {
+      darkMode: user.darkMode,
+      theme: user.darkMode ? "dark" : "light",
+    });
+  } catch (error) {
+    return sendResponse(res, 500, false, error.message);
+  }
+};
+
+const updateDarkMode = async (req, res) => {
+  try {
+    if (req.token.role !== "user") {
+      return sendResponse(res, 403, false, "Access denied");
+    }
+
+    const { darkMode } = req.body;
+
+    if (typeof darkMode !== "boolean") {
+      return sendResponse(res, 400, false, "darkMode must be true or false");
+    }
+
+    const user = await User.findById(req.token.id);
+
+    if (!user || user.status !== "Active") {
+      return sendResponse(res, 404, false, "User not found");
+    }
+
+    user.darkMode = darkMode;
+    await user.save();
+
+    return sendResponse(res, 200, true, "Dark mode updated", {
+      darkMode: user.darkMode,
+      theme: user.darkMode ? "dark" : "light",
+    });
+  } catch (error) {
+    return sendResponse(res, 500, false, error.message);
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -351,5 +405,7 @@ module.exports = {
   resetPassword,
   refreshAccessToken,
   logout,
+  getDarkMode,
+  updateDarkMode,
 };
 
